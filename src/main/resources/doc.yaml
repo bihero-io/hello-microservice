@@ -1,0 +1,25 @@
+openapi: 3.0.1
+info:
+  title: Hello ;)
+  description: Hello microservice
+  version: 1.0.0
+servers:
+  - url: https://demo1.bihero.io/api/hello
+tags:
+  - name: hello
+    description: Everything about saying 'Hello'
+paths:
+  /:
+    x-vertx-event-bus:
+      address: service.hello
+      timeout: 1000
+    get:
+      tags:
+        - hello
+      summary: Get 'Hello' word
+      operationId: getHelloWord
+      responses:
+        200:
+          description: OK
+          content: {}
+components: {}
