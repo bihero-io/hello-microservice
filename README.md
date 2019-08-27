@@ -12,7 +12,12 @@ curl http://localhost:8080/ # Hello
 Edit src/conf/config.json
 ```json
 {
-	...
+	"type": "file",
+	"format": "json",
+	"scanPeriod": 5000,
+	"config": {
+		"path": "/path/to/hellomicroservice/src/conf/config.json"
+	},
 	"serverPort": 8081,
   	"serverHost": "0.0.0.0"
 }
