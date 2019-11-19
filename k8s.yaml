@@ -1,0 +1,68 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    io.bihero.hello.service: bihero-hello
+  name: bihero-hello
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        io.bihero.hello.service: bihero-hello
+    spec:
+      containers:
+        - image: bihero/hello:${HELLO_SERVICE_IMAGE_VERSION}
+          name: bihero-hello
+          ports:
+            - containerPort: 8081
+          imagePullPolicy: Always
+          resources: {}
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.bihero.hello.service: bihero-hello
+  name: bihero-hello
+spec:
+  ports:
+    - name: "8081"
+      port: 8081
+      targetPort: 8081
+  selector:
+    io.bihero.hello.service: bihero-hello
+status:
+  loadBalancer: {}
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: bihero-hello
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/secure-backends: "false"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    kubernetes.io/tls-acme: "true"
+  namespace: default
+spec:
+  tls:
+    - hosts:
+        - ${ID_DOMAIN}
+      secretName: bihero
+  rules:
+    - host: ${ID_DOMAIN}
+      http:
+        paths:
+          - path: /api/hello(/|$)(.*)
+            backend:
+              serviceName: bihero-hello
+              servicePort: 8081

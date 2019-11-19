@@ -12,7 +12,7 @@ paths:
   /:
     x-vertx-event-bus:
       address: service.hello
-      timeout: 1000
+      timeout: 1000c
     get:
       tags:
         - hello
@@ -21,5 +21,16 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
+  /doc:
+    x-vertx-event-bus:
+      address: service.hello
+      timeout: 1000c
+    get:
+      tags:
+        - hello_doc
+      summary: Get 'Hello' microservice documentation
+      operationId: getDoc
+      responses:
+        200:
+          description: OK
 components: {}

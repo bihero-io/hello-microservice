@@ -1,0 +1,196 @@
+resource_types:
+  - name: telegram
+    type: docker-image
+    source:
+      repository: vtutrinov/concourse-telegram-resource
+      tag: latest
+  - name: kubernetes
+    type: docker-image
+    source:
+      repository: zlabjp/kubernetes-resource
+      tag: "1.16"
+resources:
+  - name: sources
+    type: git
+    source:
+      branch: master
+      uri: git@github.com:bihero-io/hello-microservice.git
+      private_key: ((deployer-private-key))
+  - name: docker-image
+    type: docker-image
+    source:
+      repository: bihero/hello
+      username: ((docker-registry-user))
+      password: ((docker-registry-password))
+  - name: telegram
+    type: telegram
+    source:
+      bot_token: ((telegram-ci-bot-token))
+      chat_id: ((telegram-group-to-report-build))
+      ci_url: ((ci_url))
+      command: "/build_hello_ms"
+  - name: kubernetes-demo
+    type: kubernetes
+    source:
+      server: https://178.63.194.241:6443
+      namespace: default
+      kubeconfig: ((kubeconfig-demo))
+jobs:
+  - name: build-hello-microservice
+    serial: true
+    public: true
+    plan:
+      - in_parallel:
+          - get: sources
+            trigger: true
+          - get: telegram
+            trigger: true
+      - put: telegram
+        params:
+          status: Build In Progress
+      - task: unit-tests
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: ((docker-registry-uri))/bih/maven
+              tag: 3-jdk-11
+              username: ((docker-private-registry-user))
+              password: ((docker-private-registry-password))
+          inputs:
+            - name: sources
+          outputs:
+            - name: test-workspace
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                output_dir=test-workspace
+                cp -R ./sources/* "${output_dir}/"
+                mvn -f "${output_dir}/pom.xml" clean test
+          caches:
+            - path: ~/.m2/
+        on_failure:
+          do:
+            - task: tests-report
+              config:
+                platform: linux
+                image_resource:
+                  type: docker-image
+                  source:
+                    repository: ((docker-registry-uri))/bih/maven
+                    tag: 3-jdk-11
+                    username: ((docker-private-registry-user))
+                    password: ((docker-private-registry-password))
+                inputs:
+                  - name: test-workspace
+                outputs:
+                  - name: message
+                run:
+                  path: /bin/sh
+                  args:
+                    - -c
+                    - |
+                      output_dir=test-workspace
+                      mvn -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -f "${output_dir}/pom.xml" site-deploy
+                      version=$(cat $output_dir/target/classes/version.txt)
+                      cat >message/msg <<EOL
+                      <a href="https://nexus.dev.techedge.pro:8443/repository/reports/hello-microservice/${version}/allure/">Allure report</a>
+                      EOL
+                caches:
+                  - path: ~/.m2/
+            - put: telegram
+              params:
+                status: Build Failed (unit-tests)
+                message_file: message/msg
+      - task: tests-report
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: ((docker-registry-uri))/bih/maven
+              tag: 3-jdk-11
+              username: ((docker-private-registry-user))
+              password: ((docker-private-registry-password))
+          inputs:
+            - name: test-workspace
+          outputs:
+            - name: message
+            - name: test-workspace
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                work_dir=test-workspace
+                mvn -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -f "${work_dir}/pom.xml" site-deploy
+                version=$(cat $work_dir/target/classes/version.txt)
+                cat >message/msg <<EOL
+                <a href="https://nexus.dev.techedge.pro:8443/repository/reports/hello-microservice/${version}/allure/">Allure report</a>
+                EOL
+          caches:
+            - path: ~/.m2/
+      - task: package
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: ((docker-registry-uri))/bih/maven
+              tag: 3-jdk-11
+              username: ((docker-private-registry-user))
+              password: ((docker-private-registry-password))
+          inputs:
+            - name: test-workspace
+          outputs:
+            - name: workspace
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                output_dir=workspace
+                cp -R ./sources/* "${output_dir}/"
+                mvn -f "${output_dir}/pom.xml" package -Dmaven.main.skip -DskipTests
+          caches:
+            - path: ~/.m2/
+        on_failure:
+          do:
+            - put: telegram
+              params:
+                status: Build Failed (package)
+      - put: docker-image
+        params:
+          build: workspace
+        get_params:
+          skip_download: true
+      - task: make-k8s-app-template
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: bhgedigital/envsubst
+          inputs:
+            - name: sources
+          outputs:
+            - name: k8s
+          params:
+            DOMAIN: demo1.bihero.io
+            HELLO_SERVICE_IMAGE_VERSION: latest
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                envsubst < sources/k8s.yaml > k8s/hello_app_template.yaml
+      - put: kubernetes-demo
+        params:
+          kubectl: appply -f k8s/hello_app_template.yaml
+      - put: telegram
+        params:
+          status: Build Success
+          message_file: message/msg

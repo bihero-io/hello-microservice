@@ -7,6 +7,16 @@
     <properties>
         <main.verticle>io.bihero.hello.HelloVerticle</main.verticle>
         <vertx.version>3.8.1</vertx.version>
+        <logback.version>1.2.3</logback.version>
+        <junit-jupiter.version>5.3.1</junit-jupiter.version>
+        <maven-surefire-plugin.version>2.19.1</maven-surefire-plugin.version>
+        <junit-platform-surefire-provider.version>1.1.0</junit-platform-surefire-provider.version>
+        <assertj-core.version>3.8.0</assertj-core.version>
+        <allure.version>2.8.1</allure.version>
+        <allure-maven.version>2.10.0</allure-maven.version>
+        <aspectj.version>1.9.2</aspectj.version>
+        <mockito.version>2.21.0</mockito.version>
+        <rest-assured.version>3.0.0</rest-assured.version>
     </properties>
 
     <groupId>io.bihero</groupId>
@@ -22,9 +32,60 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>io.qameta.allure</groupId>
+                <artifactId>allure-maven</artifactId>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
+                <plugin>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <!-- latest version (2.20.1) does not work well with JUnit5 -->
+                    <version>${maven-surefire-plugin.version}</version>
+                    <configuration>
+                        <properties>
+                            <property>
+                                <name>listener</name>
+                                <value>io.qameta.allure.junit5.AllureJunit5</value>
+                            </property>
+                        </properties>
+                        <includes>
+                            <include>**/*Test*.java</include>
+                        </includes>
+                        <argLine>
+                            -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar" -Djdk.net.URLClassPath.disableClassPathURLCheck=true
+                        </argLine>
+                        <systemProperties>
+                            <property>
+                                <name>allure.results.directory</name>
+                                <value>${project.basedir}/target/allure-results</value>
+                            </property>
+                            <property>
+                                <name>junit.jupiter.extensions.autodetection.enabled</name>
+                                <value>true</value>
+                            </property>
+                        </systemProperties>
+                        <reportFormat>plain</reportFormat>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.aspectj</groupId>
+                            <artifactId>aspectjweaver</artifactId>
+                            <version>${aspectj.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.junit.platform</groupId>
+                            <artifactId>junit-platform-surefire-provider</artifactId>
+                            <version>${junit-platform-surefire-provider.version}</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.junit.jupiter</groupId>
+                            <artifactId>junit-jupiter-engine</artifactId>
+                            <version>${junit-jupiter.version}</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.1</version>
@@ -89,6 +150,11 @@
                         </execution>
                     </executions>
                 </plugin>
+                <plugin>
+                    <groupId>io.qameta.allure</groupId>
+                    <artifactId>allure-maven</artifactId>
+                    <version>${allure-maven.version}</version>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -103,6 +169,62 @@
             <groupId>io.vertx</groupId>
             <artifactId>vertx-codegen</artifactId>
             <version>${vertx.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
+
+        <!-- test -->
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-unit</artifactId>
+            <version>${vertx.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-junit5</artifactId>
+            <version>${vertx.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj-core.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-junit5</artifactId>
+            <version>${allure.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-web-client</artifactId>
+            <version>${vertx.version}</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

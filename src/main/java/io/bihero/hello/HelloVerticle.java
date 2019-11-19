@@ -12,12 +12,27 @@ import io.vertx.serviceproxy.ServiceBinder;
 
 public class HelloVerticle extends AbstractVerticle {
 
-    HttpServer server;
-    MessageConsumer<JsonObject> consumer;
+    private HttpServer server;
+    private MessageConsumer<JsonObject> consumer;
 
-    public void startHelloService() {
+    @Override
+    public void start(Promise<Void> promise) {
+        startHelloService();
+        startHttpServer().future().setHandler(promise);
+    }
+
+    /**
+     * This method closes the http server and unregister all services loaded to Event Bus
+     */
+    @Override
+    public void stop(){
+        this.server.close();
+        consumer.unregister();
+    }
+
+    private void startHelloService() {
         consumer = new ServiceBinder(vertx).setAddress("service.hello")
-                .register(HelloService.class, HelloService.create());
+                .register(HelloService.class, HelloService.create(getVertx()));
     }
 
     /**
@@ -37,11 +52,6 @@ public class HelloVerticle extends AbstractVerticle {
                 // Generate the router
                 Router router = routerFactory.getRouter();
 
-                // Api path to handle OpenAPI doc request for our service
-                router.get("/doc").handler(context ->
-                        vertx.fileSystem().readFile("doc.yaml", buffResult ->
-                                context.response().end(buffResult.result())));
-
                 int port = config().getInteger("serverPort", 8080);
                 String host = config().getString("serverHost", "localhost");
 
@@ -57,21 +67,6 @@ public class HelloVerticle extends AbstractVerticle {
             }
         });
         return promise;
-    }
-
-    @Override
-    public void start(Promise<Void> promise) {
-        startHelloService();
-        startHttpServer().future().setHandler(promise);
-    }
-
-    /**
-     * This method closes the http server and unregister all services loaded to Event Bus
-     */
-    @Override
-    public void stop(){
-        this.server.close();
-        consumer.unregister();
     }
 
 }
