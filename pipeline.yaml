@@ -9,7 +9,14 @@ resource_types:
     source:
       repository: zlabjp/kubernetes-resource
       tag: "1.16"
+  - name: metadata
+    type: docker-image
+    source:
+      repository: olhtbr/metadata-resource
+      tag: 2.0.1
 resources:
+  - name: metadata
+    type: metadata
   - name: sources
     type: git
     source:
@@ -45,6 +52,7 @@ jobs:
             trigger: true
           - get: telegram
             trigger: true
+          - put: metadata
       - put: telegram
         params:
           status: Build In Progress
@@ -61,13 +69,13 @@ jobs:
           inputs:
             - name: sources
           outputs:
-            - name: test-workspace
+            - name: tested-workspace
           run:
             path: /bin/sh
             args:
               - -c
               - |
-                output_dir=test-workspace
+                output_dir=tested-workspace
                 cp -R ./sources/* "${output_dir}/"
                 mvn -f "${output_dir}/pom.xml" clean test
           caches:
@@ -85,7 +93,7 @@ jobs:
                     username: ((docker-private-registry-user))
                     password: ((docker-private-registry-password))
                 inputs:
-                  - name: test-workspace
+                  - name: tested-workspace
                 outputs:
                   - name: message
                 run:
@@ -93,7 +101,7 @@ jobs:
                   args:
                     - -c
                     - |
-                      output_dir=test-workspace
+                      output_dir=tested-workspace
                       mvn -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -f "${output_dir}/pom.xml" site-deploy
                       version=$(cat $output_dir/target/classes/version.txt)
                       cat >message/msg <<EOL
@@ -116,16 +124,16 @@ jobs:
               username: ((docker-private-registry-user))
               password: ((docker-private-registry-password))
           inputs:
-            - name: test-workspace
+            - name: tested-workspace
           outputs:
             - name: message
-            - name: test-workspace
+            - name: tested-workspace
           run:
             path: /bin/sh
             args:
               - -c
               - |
-                work_dir=test-workspace
+                work_dir=tested-workspace
                 mvn -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -f "${work_dir}/pom.xml" site-deploy
                 version=$(cat $work_dir/target/classes/version.txt)
                 cat >message/msg <<EOL
@@ -144,17 +152,23 @@ jobs:
               username: ((docker-private-registry-user))
               password: ((docker-private-registry-password))
           inputs:
-            - name: test-workspace
+            - name: tested-workspace
+            - name: metadata
           outputs:
-            - name: workspace
+            - name: app-packaged-workspace
+            - name: metadata
           run:
             path: /bin/sh
             args:
               - -c
               - |
-                output_dir=workspace
-                cp -R ./sources/* "${output_dir}/"
+                output_dir=app-packaged-workspace
+                cp -R ./tested-workspace/* "${output_dir}/"
                 mvn -f "${output_dir}/pom.xml" package -Dmaven.main.skip -DskipTests
+                env
+                tag="-"$(cat metadata/build_name)
+                echo $tag >> ${output_dir}/target/classes/version.txt
+                cat ${output_dir}/target/classes/version.txt > metadata/version
           caches:
             - path: ~/.m2/
         on_failure:
@@ -164,7 +178,8 @@ jobs:
                 status: Build Failed (package)
       - put: docker-image
         params:
-          build: workspace
+          build: app-packaged-workspace
+          tag_file: app-packaged-workspace/target/classes/version.txt
         get_params:
           skip_download: true
       - task: make-k8s-app-template
@@ -176,6 +191,7 @@ jobs:
               repository: bhgedigital/envsubst
           inputs:
             - name: sources
+            - name: metadata
           outputs:
             - name: k8s
           params:
@@ -186,10 +202,13 @@ jobs:
             args:
               - -c
               - |
-                envsubst < sources/k8s.yaml > k8s/hello_app_template.yaml
+                export DOMAIN=demo1.bihero.io
+                export HELLO_SERVICE_IMAGE_VERSION=$(cat metadata/version)
+                cat sources/k8s.yaml | envsubst > k8s/hello_app_template.yaml
+                cat k8s/hello_app_template.yaml
       - put: kubernetes-demo
         params:
-          kubectl: appply -f k8s/hello_app_template.yaml
+          kubectl: apply -f k8s/hello_app_template.yaml
       - put: telegram
         params:
           status: Build Success

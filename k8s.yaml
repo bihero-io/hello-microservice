@@ -56,10 +56,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - ${ID_DOMAIN}
+        - ${DOMAIN}
       secretName: bihero
   rules:
-    - host: ${ID_DOMAIN}
+    - host: ${DOMAIN}
       http:
         paths:
           - path: /api/hello(/|$)(.*)
