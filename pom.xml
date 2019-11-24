@@ -25,160 +25,110 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>default-compile</id>
+                        <configuration>
+                            <annotationProcessors>
+                                <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+                            </annotationProcessors>
+                            <generatedSourcesDirectory>src/main/generated</generatedSourcesDirectory>
+                            <compilerArgs>
+                                <arg>-Acodegen.output=${project.basedir}/src/main</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>default-testCompile</id>
+                        <configuration>
+                            <annotationProcessors>
+                                <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
+                            </annotationProcessors>
+                            <generatedTestSourcesDirectory>src/test/generated</generatedTestSourcesDirectory>
+                            <compilerArgs>
+                                <arg>-Acodegen.output=${project.basedir}/src/test</arg>
+                            </compilerArgs>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+                <configuration>
+                    <properties>
+                        <property>
+                            <name>listener</name>
+                            <value>io.qameta.allure.junit5.AllureJunit5</value>
+                        </property>
+                    </properties>
+                    <includes>
+                        <include>**/*Test*.java</include>
+                    </includes>
+                    <argLine>
+                        -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar" -Djdk.net.URLClassPath.disableClassPathURLCheck=true
+                    </argLine>
+                    <systemProperties>
+                        <property>
+                            <name>allure.results.directory</name>
+                            <value>${project.basedir}/target/allure-results</value>
+                        </property>
+                        <property>
+                            <name>junit.jupiter.extensions.autodetection.enabled</name>
+                            <value>true</value>
+                        </property>
+                    </systemProperties>
+                    <reportFormat>plain</reportFormat>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjweaver</artifactId>
+                        <version>${aspectj.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.junit.platform</groupId>
+                        <artifactId>junit-platform-surefire-provider</artifactId>
+                        <version>${junit-platform-surefire-provider.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.junit.jupiter</groupId>
+                        <artifactId>junit-jupiter-engine</artifactId>
+                        <version>${junit-jupiter.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>io.qameta.allure</groupId>
                 <artifactId>allure-maven</artifactId>
+                <version>${allure-maven.version}</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
+                <version>3.7.1</version>
                 <dependencies>
                     <dependency>
                         <groupId>org.apache.maven.wagon</groupId>
                         <artifactId>wagon-webdav-jackrabbit</artifactId>
                         <version>2.8</version>
                     </dependency>
+                    <!-- API, jav&lt;!&ndash;a.xml.bind module -->
                 </dependencies>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+                <version>3.0.0</version>
+            </plugin>
         </plugins>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <!-- latest version (2.20.1) does not work well with JUnit5 -->
-                    <version>${maven-surefire-plugin.version}</version>
-                    <configuration>
-                        <properties>
-                            <property>
-                                <name>listener</name>
-                                <value>io.qameta.allure.junit5.AllureJunit5</value>
-                            </property>
-                        </properties>
-                        <includes>
-                            <include>**/*Test*.java</include>
-                        </includes>
-                        <argLine>
-                            -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar" -Djdk.net.URLClassPath.disableClassPathURLCheck=true
-                        </argLine>
-                        <systemProperties>
-                            <property>
-                                <name>allure.results.directory</name>
-                                <value>${project.basedir}/target/allure-results</value>
-                            </property>
-                            <property>
-                                <name>junit.jupiter.extensions.autodetection.enabled</name>
-                                <value>true</value>
-                            </property>
-                        </systemProperties>
-                        <reportFormat>plain</reportFormat>
-                    </configuration>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.aspectj</groupId>
-                            <artifactId>aspectjweaver</artifactId>
-                            <version>${aspectj.version}</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>org.junit.platform</groupId>
-                            <artifactId>junit-platform-surefire-provider</artifactId>
-                            <version>${junit-platform-surefire-provider.version}</version>
-                        </dependency>
-                        <dependency>
-                            <groupId>org.junit.jupiter</groupId>
-                            <artifactId>junit-jupiter-engine</artifactId>
-                            <version>${junit-jupiter.version}</version>
-                        </dependency>
-                    </dependencies>
-                </plugin>
-                <plugin>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.1</version>
-                    <configuration>
-                        <source>11</source>
-                        <target>11</target>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>default-compile</id>
-                            <configuration>
-                                <annotationProcessors>
-                                    <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
-                                </annotationProcessors>
-                                <generatedSourcesDirectory>src/main/generated</generatedSourcesDirectory>
-                                <compilerArgs>
-                                    <arg>-Acodegen.output=${project.basedir}/src/main</arg>
-                                </compilerArgs>
-                            </configuration>
-                        </execution>
-                        <execution>
-                            <id>default-testCompile</id>
-                            <configuration>
-                                <annotationProcessors>
-                                    <annotationProcessor>io.vertx.codegen.CodeGenProcessor</annotationProcessor>
-                                </annotationProcessors>
-                                <generatedTestSourcesDirectory>src/test/generated</generatedTestSourcesDirectory>
-                                <compilerArgs>
-                                    <arg>-Acodegen.output=${project.basedir}/src/test</arg>
-                                </compilerArgs>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-shade-plugin</artifactId>
-                    <version>2.3</version>
-                    <executions>
-                        <execution>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>shade</goal>
-                            </goals>
-                            <configuration>
-                                <transformers>
-                                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                        <manifestEntries>
-                                            <Main-Class>io.vertx.core.Launcher</Main-Class>
-                                            <Main-Verticle>${main.verticle}</Main-Verticle>
-                                        </manifestEntries>
-                                    </transformer>
-                                    <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                                        <resource>META-INF/services/io.vertx.core.spi.VerticleFactory</resource>
-                                    </transformer>
-                                </transformers>
-                                <artifactSet>
-                                </artifactSet>
-                                <outputFile>${project.build.directory}/${project.artifactId}-fat.jar</outputFile>
-                            </configuration>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
-                    <groupId>io.qameta.allure</groupId>
-                    <artifactId>allure-maven</artifactId>
-                    <version>${allure-maven.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-site-plugin</artifactId>
-                    <version>3.7.1</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-project-info-reports-plugin</artifactId>
-                    <version>3.0.0</version>
-                </plugin>
-            </plugins>
-        </pluginManagement>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -207,7 +157,7 @@
         </repository>
         <site>
             <id>reports</id>
-            <url>dav:https://nexus.dev.techedge.pro:8443/repository/reports/</url>
+            <url>dav:https://nexus.dev.techedge.pro:8443/repository/reports/${project.artifactId}/</url>
         </site>
     </distributionManagement>
     <reporting>
@@ -242,7 +192,7 @@
             <version>${logback.version}</version>
         </dependency>
 
-        <!-- test -->
+        <!-- test &ndash;&gt;-->
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-unit</artifactId>

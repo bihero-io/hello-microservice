@@ -77,7 +77,7 @@ jobs:
               - |
                 output_dir=tested-workspace
                 cp -R ./sources/* "${output_dir}/"
-                mvn -f "${output_dir}/pom.xml" clean test
+                mvn -f "${output_dir}/pom.xml" clean compile surefire:test
           caches:
             - path: ~/.m2/
         on_failure:
@@ -194,9 +194,6 @@ jobs:
             - name: metadata
           outputs:
             - name: k8s
-          params:
-            DOMAIN: demo1.bihero.io
-            HELLO_SERVICE_IMAGE_VERSION: latest
           run:
             path: /bin/sh
             args:
