@@ -77,7 +77,7 @@ jobs:
               - |
                 output_dir=tested-workspace
                 cp -R ./sources/* "${output_dir}/"
-                mvn -f "${output_dir}/pom.xml" clean compile surefire:test
+                mvn -f "${output_dir}/pom.xml" clean test
           caches:
             - path: ~/.m2/
         on_failure:
