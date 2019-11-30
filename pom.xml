@@ -175,14 +175,6 @@
         </resources>
     </build>
     <distributionManagement>
-        <snapshotRepository>
-            <id>nexus-snapshots</id>
-            <url>https://nexus.dev.techedge.pro:8443/repository/maven-snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>nexus-releases</id>
-            <url>https://nexus.dev.techedge.pro:8443/repository/maven-releases</url>
-        </repository>
         <site>
             <id>reports</id>
             <url>dav:https://nexus.dev.techedge.pro:8443/repository/reports/${project.artifactId}/</url>
